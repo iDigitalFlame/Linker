@@ -160,7 +160,7 @@ func isNameValid(s string) bool {
 // return an error if there is an issue during the listener creation.
 func (l *Linker) Listen() error {
 	if l.get != nil {
-		return nil
+		return ErrNotConfigured
 	}
 	var (
 		s   = make(chan os.Signal)
