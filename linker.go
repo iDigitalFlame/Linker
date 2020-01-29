@@ -1,5 +1,5 @@
 // linker.go
-// URL Shortner with MySQL database.
+// URL Shortener with MySQL database.
 //
 // Copyright (C) 2020 iDigitalFlame
 //
