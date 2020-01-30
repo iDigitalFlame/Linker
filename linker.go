@@ -251,7 +251,7 @@ func (l *Linker) load(s string) error {
 		if err != nil {
 			return fmt.Errorf("unable to parse default url %q: %w", c.Default, err)
 		}
-		if len(u.Scheme) == 0 {
+		if !u.IsAbs() {
 			u.Scheme = "https"
 		}
 		l.url = u.String()
@@ -282,7 +282,7 @@ func (l *Linker) Add(n, u string) error {
 	if err != nil {
 		return fmt.Errorf("invalid URL %q: %w", u, err)
 	}
-	if len(p.Scheme) == 0 {
+	if !p.IsAbs() {
 		p.Scheme = "https"
 	}
 	q, err := l.db.Prepare(sqlAdd)
