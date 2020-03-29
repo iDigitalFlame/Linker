@@ -58,16 +58,16 @@ const DefaultConfig = `{
 }`
 
 const (
-	sqlGet    = "SELECT LinkURL FROM Links WHERE LinkName = ?"
-	sqlAdd    = "INSERT INTO Links(LinkName, LinkURL) VALUES(?, ?)"
-	sqlList   = "SELECT LinkName, LinkURL FROM Links"
-	sqlDelete = "DELETE FROM Links WHERE LinkName = ?"
+	sqlGet    = `SELECT LinkURL FROM Links WHERE LinkName = ?`
+	sqlAdd    = `INSERT INTO Links(LinkName, LinkURL) VALUES(?, ?)`
+	sqlList   = `SELECT LinkName, LinkURL FROM Links`
+	sqlDelete = `DELETE FROM Links WHERE LinkName = ?`
 
-	defaultURL      = "https://duckduckgo.com"
-	defaultFile     = "/etc/linker.conf"
+	defaultURL      = `https://duckduckgo.com`
+	defaultFile     = `/etc/linker.conf`
 	defaultTimeout  = 5 * time.Second
-	defaultDatabase = "CREATE TABLE IF NOT EXISTS Links (LinkID INT(32) NOT NULL PRIMARY KEY AUTO_INCREMENT, " +
-		"LinkName VARCHAR(64) NOT NULL UNIQUE, LinkURL VARCHAR(1024) NOT NULL)"
+	defaultDatabase = `CREATE TABLE IF NOT EXISTS Links (LinkID INT(32) NOT NULL PRIMARY KEY AUTO_INCREMENT, ` +
+		`LinkName VARCHAR(64) NOT NULL UNIQUE, LinkURL VARCHAR(1024) NOT NULL)`
 )
 
 var (
@@ -78,7 +78,7 @@ var (
 	// non-loaded Linker instance.
 	ErrNotConfigured = errors.New("database is not loaded or configured")
 
-	regCheckURL = regexp.MustCompile("(^\\/[a-zA-Z0-9]+)")
+	regCheckURL = regexp.MustCompile(`(^\/[a-zA-Z0-9]+)`)
 )
 
 // Linker is a struct that contains the web service and SQL queries that
@@ -185,7 +185,7 @@ func (l *Linker) Listen() error {
 	if l.get, err = l.db.PrepareContext(l.ctx, sqlGet); err != nil {
 		return fmt.Errorf("unable to prepare get statement: %w", err)
 	}
-	signal.Notify(s, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGKILL)
+	signal.Notify(s, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	go func(err *error) {
 		*err = l.Server.ListenAndServe()
 	}(&err)
