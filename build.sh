@@ -15,7 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-output="../bin/linker"
+output="bin/linker"
 if [ $# -ge 1 ]; then
     output="$1"
 fi
