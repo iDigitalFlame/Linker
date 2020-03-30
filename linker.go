@@ -41,8 +41,8 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-// DefaultConfig is a string representation of the default configuration for Linker.
-// This can be used in a JSON file to configure Linker.
+// DefaultConfig is a string representation of the default configuration for Linker. This can be used in a
+// JSON file to configure a Linker instance.
 const DefaultConfig = `{
     "key": "",
     "cert": "",
@@ -71,18 +71,16 @@ const (
 )
 
 var (
-	// ErrInvalidName is an error returned by the Add or Delete functions when a name is
-	// passed that contains any invalid or non printable characters.
+	// ErrInvalidName is an error returned by the Add or Delete functions when a name is passed that contains any
+	// invalid or non printable characters.
 	ErrInvalidName = errors.New("name contains invalid characters")
-	// ErrNotConfigured is an error that is returned when any operations are attempted on a
-	// non-loaded Linker instance.
+	// ErrNotConfigured is an error that is returned when any operations are attempted on a non-loaded Linker instance.
 	ErrNotConfigured = errors.New("database is not loaded or configured")
 
 	regCheckURL = regexp.MustCompile(`(^\/[a-zA-Z0-9]+)`)
 )
 
-// Linker is a struct that contains the web service and SQL queries that
-// support the Linker URL shortener.
+// Linker is a struct that contains the web service and SQL queries that support the Linker URL shortener.
 type Linker struct {
 	db     *sql.DB
 	ctx    context.Context
@@ -91,15 +89,15 @@ type Linker struct {
 	key    string
 	cert   string
 	cancel context.CancelFunc
-	*http.Server
+	http.Server
 }
 type config struct {
-	Key      string    `json:"key"`
-	Cert     string    `json:"cert"`
-	Listen   string    `json:"listen"`
-	Timeout  uint8     `json:"timeout"`
-	Default  string    `json:"default"`
-	Database *database `json:"db"`
+	Key      string   `json:"key"`
+	Cert     string   `json:"cert"`
+	Listen   string   `json:"listen"`
+	Timeout  uint8    `json:"timeout"`
+	Default  string   `json:"default"`
+	Database database `json:"db"`
 }
 type database struct {
 	Name     string `json:"name"`
@@ -130,7 +128,7 @@ func (l *Linker) List() error {
 		if err := r.Scan(&n, &u); err != nil {
 			return fmt.Errorf("unable to parse query statement results: %w", err)
 		}
-		fmt.Printf("%-14s%s\n", n, u)
+		fmt.Fprintf(os.Stdout, "%-14s%s\n", n, u)
 	}
 	return nil
 }
@@ -148,12 +146,13 @@ func (l *Linker) Close() error {
 			return fmt.Errorf("unable to close database: %w", err)
 		}
 	}
-	if l != nil && l.ctx.Err() != nil {
+	if l.ctx != nil && l.ctx.Err() != nil {
 		l.cancel()
 		if err := l.Server.Shutdown(l.ctx); err != nil {
 			return fmt.Errorf("unable to shutdown server: %w", err)
 		}
 	}
+	l.Server.Shutdown(l.ctx)
 	return l.Server.Close()
 }
 func isNameValid(s string) bool {
@@ -170,9 +169,9 @@ func isNameValid(s string) bool {
 	return true
 }
 
-// Listen will start the listing session for Linker to redirect HTTP requests. This function
-// will block until the Close function is called or a SIGINT is received. This function will
-// return an error if there is an issue during the listener creation.
+// Listen will start the listing session for Linker to redirect HTTP requests. This function will block until the
+// Close function is called or a SIGINT is received. This function will return an error if there is an issue
+// during the listener creation.
 func (l *Linker) Listen() error {
 	if l.get != nil {
 		return ErrNotConfigured
@@ -186,9 +185,10 @@ func (l *Linker) Listen() error {
 		return fmt.Errorf("unable to prepare get statement: %w", err)
 	}
 	signal.Notify(s, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	go func(err *error) {
-		*err = l.Server.ListenAndServe()
-	}(&err)
+	go func(e *error, x context.CancelFunc) {
+		*e = l.Server.ListenAndServe()
+		x()
+	}(&err, l.cancel)
 	select {
 	case <-s:
 	case <-l.ctx.Done():
@@ -200,7 +200,7 @@ func (l *Linker) Listen() error {
 // The path to this file can be passed in the string argument or read from the "LINKER_CONFIG" environment variable.
 // This function will return an error if the load could not happen on the configuration file is invalid.
 func New(s string) (*Linker, error) {
-	l := &Linker{Server: &http.Server{Handler: &http.ServeMux{}}}
+	l := &Linker{Server: http.Server{Handler: new(http.ServeMux)}}
 	if err := l.load(s); err != nil {
 		return nil, err
 	}
@@ -229,7 +229,7 @@ func (l *Linker) load(s string) error {
 	if err := json.Unmarshal(b, &c); err != nil {
 		return fmt.Errorf("unable to parse %q: %w", s, err)
 	}
-	if c.Database == nil {
+	if len(c.Database.Username) == 0 || len(c.Database.Server) == 0 || len(c.Database.Name) == 0 {
 		return fmt.Errorf("%q does not contain a database configuration", s)
 	}
 	if l.db, err = sql.Open("mysql", fmt.Sprintf("%s:%s@%s/%s", c.Database.Username, c.Database.Password, c.Database.Server, c.Database.Name)); err != nil {
@@ -269,8 +269,8 @@ func (l *Linker) load(s string) error {
 	return nil
 }
 
-// Add will attempt to add a redirect with the name of the first string to the URL provided in the
-// second string argument. This function will return an error if the add fails.
+// Add will attempt to add a redirect with the name of the first string to the URL provided in the second
+// string argument. This function will return an error if the add fails.
 func (l *Linker) Add(n, u string) error {
 	if l.db == nil {
 		return ErrNotConfigured
@@ -300,8 +300,8 @@ func (l *Linker) Add(n, u string) error {
 	return nil
 }
 
-// Delete will attempt to remove the redirect name and URL using the mapping name. This function
-// will return an error if the deletion fails. This function will pass even if the URL does not exist.
+// Delete will attempt to remove the redirect name and URL using the mapping name. This function will return
+// an error if the deletion fails. This function will pass even if the URL does not exist.
 func (l *Linker) Delete(n string) error {
 	if l.db == nil {
 		return ErrNotConfigured
@@ -329,7 +329,7 @@ func (l *Linker) context(_ net.Listener) context.Context {
 func (l *Linker) serve(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Printf("http function recovered from a panic: %s\n", err)
+			fmt.Fprintf(os.Stderr, "http function recovered from a panic: %s\n", err)
 		}
 	}()
 	if len(r.RequestURI) <= 1 {
