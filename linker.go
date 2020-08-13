@@ -193,6 +193,8 @@ func (l *Linker) Listen() error {
 	case <-s:
 	case <-l.ctx.Done():
 	}
+	l.Server.Shutdown(l.ctx)
+	l.Server.Close()
 	return err
 }
 
@@ -336,8 +338,10 @@ func (l *Linker) serve(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, l.url, http.StatusTemporaryRedirect)
 		return
 	}
-	s := html.EscapeString(r.RequestURI)
-	p := regCheckURL.FindStringIndex(s)
+	var (
+		s = html.EscapeString(r.RequestURI)
+		p = regCheckURL.FindStringIndex(s)
+	)
 	if p == nil || p[0] != 0 || p[1] <= 1 {
 		http.Redirect(w, r, l.url, http.StatusTemporaryRedirect)
 		return
@@ -349,7 +353,7 @@ func (l *Linker) serve(w http.ResponseWriter, r *http.Request) {
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, "Could not fetch requested URL: %q", x)
-			fmt.Printf("http function received an error: %s\n", err.Error())
+			fmt.Fprintf(os.Stderr, "http function received an error: %s\n", err.Error())
 		}
 		return
 	}
@@ -358,7 +362,7 @@ func (l *Linker) serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if p[1] < len(s) {
-		n = fmt.Sprintf("%s%s", n, s[p[1]:])
+		n = n + s[p[1]:]
 	}
 	http.Redirect(w, r, n, http.StatusTemporaryRedirect)
 }
