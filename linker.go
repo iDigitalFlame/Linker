@@ -105,6 +105,10 @@ type database struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
+type errorValue struct {
+	e error
+	s string
+}
 
 // List will gather and print all the current link dataset. This function returns an error
 // if there an error reading from the database.
@@ -114,21 +118,23 @@ func (l *Linker) List() error {
 	}
 	q, err := l.db.Prepare(sqlList)
 	if err != nil {
-		return fmt.Errorf("unable to prepare query statement: %w", err)
+		return newError("unable to prepare query statement", err)
 	}
-	defer q.Close()
 	r, err := q.Query()
 	if err != nil {
-		return fmt.Errorf("unable to execute query statement: %w", err)
+		q.Close()
+		return newError("unable to execute query statement", err)
 	}
-	defer r.Close()
-	fmt.Printf("%-14s%s\n==============================================\n", "Name", "URL")
 	var n, u string
-	for r.Next() {
-		if err := r.Scan(&n, &u); err != nil {
-			return fmt.Errorf("unable to parse query statement results: %w", err)
+	for os.Stdout.WriteString(expandString("Name", 15) + "URL\n==============================================\n"); r.Next(); {
+		if err = r.Scan(&n, &u); err != nil {
+			break
 		}
-		fmt.Fprintf(os.Stdout, "%-14s%s\n", n, u)
+		os.Stdout.WriteString(expandString(n, 15) + u + "\n")
+	}
+	r.Close()
+	if q.Close(); err != nil {
+		return newError("unable to parse query statement results", err)
 	}
 	return nil
 }
@@ -138,18 +144,20 @@ func (l *Linker) List() error {
 func (l *Linker) Close() error {
 	if l.get != nil {
 		if err := l.get.Close(); err != nil {
-			return fmt.Errorf("unable to close get statement: %w", err)
+			return newError("unable to close get statement", err)
 		}
 	}
 	if l.db != nil {
 		if err := l.db.Close(); err != nil {
-			return fmt.Errorf("unable to close database: %w", err)
+			return newError("unable to close database", err)
 		}
 	}
-	if l.ctx != nil && l.ctx.Err() != nil {
+	select {
+	case <-l.ctx.Done():
+	default:
 		l.cancel()
 		if err := l.Server.Shutdown(l.ctx); err != nil {
-			return fmt.Errorf("unable to shutdown server: %w", err)
+			return newError("unable to shutdown server", err)
 		}
 	}
 	l.Server.Shutdown(l.ctx)
@@ -176,14 +184,12 @@ func (l *Linker) Listen() error {
 	if l.get != nil {
 		return ErrNotConfigured
 	}
-	var (
-		s   = make(chan os.Signal)
-		err error
-	)
+	var err error
 	l.ctx, l.cancel = context.WithCancel(context.Background())
 	if l.get, err = l.db.PrepareContext(l.ctx, sqlGet); err != nil {
-		return fmt.Errorf("unable to prepare get statement: %w", err)
+		return newError("unable to prepare get statement", err)
 	}
+	s := make(chan os.Signal, 1)
 	signal.Notify(s, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	go func(e *error, x context.CancelFunc) {
 		*e = l.Server.ListenAndServe()
@@ -193,9 +199,19 @@ func (l *Linker) Listen() error {
 	case <-s:
 	case <-l.ctx.Done():
 	}
+	close(s)
 	l.Server.Shutdown(l.ctx)
 	l.Server.Close()
 	return err
+}
+func (e errorValue) Error() string {
+	return e.s
+}
+func (e errorValue) Unwrap() error {
+	return e.e
+}
+func (e errorValue) String() string {
+	return e.s
 }
 
 // New creates a new Linker instance and attempts to gather the initial configuration from a JSON formatted file.
@@ -217,41 +233,39 @@ func (l *Linker) load(s string) error {
 			s = defaultFile
 		}
 	}
-	i, err := os.Stat(s)
-	if err != nil {
-		return fmt.Errorf("%q: %w", s, os.ErrNotExist)
-	}
-	if i.IsDir() {
-		return fmt.Errorf("path %q is not a file", s)
+	if i, err := os.Stat(s); err != nil {
+		return newError(`unable to access file "`+s+`"`, err)
+	} else if i.IsDir() {
+		return errors.New(`file "` + s + `" is a directory`)
 	}
 	b, err := ioutil.ReadFile(s)
 	if err != nil {
-		return fmt.Errorf("unable to read %q: %w", s, err)
+		return newError(`unable to read file "`+s+`"`, err)
 	}
-	if err := json.Unmarshal(b, &c); err != nil {
-		return fmt.Errorf("unable to parse %q: %w", s, err)
+	if err = json.Unmarshal(b, &c); err != nil {
+		return newError(`unable to parse file "`+s+`"`, err)
 	}
 	if len(c.Database.Username) == 0 || len(c.Database.Server) == 0 || len(c.Database.Name) == 0 {
-		return fmt.Errorf("%q does not contain a database configuration", s)
+		return errors.New(`file "` + s + `" does not contain a valid database configuration`)
 	}
-	if l.db, err = sql.Open("mysql", fmt.Sprintf("%s:%s@%s/%s", c.Database.Username, c.Database.Password, c.Database.Server, c.Database.Name)); err != nil {
-		return fmt.Errorf("unable to connect to database %q on %q: %w", c.Database.Name, c.Database.Server, err)
+	if l.db, err = sql.Open("mysql", c.Database.Username+":"+c.Database.Password+"@"+c.Database.Server+"/"+c.Database.Name); err != nil {
+		return newError(`unable to connect to database "`+c.Database.Name+`" on "`+c.Database.Server+`"`, err)
 	}
-	if err := l.db.Ping(); err != nil {
-		return fmt.Errorf("unable to connect to database %q on %q: %w", c.Database.Name, c.Database.Server, err)
+	if err = l.db.Ping(); err != nil {
+		return newError(`unable to connect to database "`+c.Database.Name+`" on "`+c.Database.Server+`"`, err)
 	}
 	n, err := l.db.Prepare(defaultDatabase)
 	if err != nil {
-		return fmt.Errorf("unable to prepare initial table in database %q on %q: %w", c.Database.Name, c.Database.Server, err)
+		return newError(`unable to prepare the initial database table in "`+c.Database.Name+`" on "`+c.Database.Server+`"`, err)
 	}
-	defer n.Close()
-	if _, err := n.Exec(); err != nil {
-		return fmt.Errorf("unable to create initial table in database %q on %q: %w", c.Database.Name, c.Database.Server, err)
+	_, err = n.Exec()
+	if n.Close(); err != nil {
+		return newError(`unable to create the initial database table in "`+c.Database.Name+`" on "`+c.Database.Server+`"`, err)
 	}
 	if len(c.Default) > 0 {
 		u, err := url.Parse(c.Default)
 		if err != nil {
-			return fmt.Errorf("unable to parse default url %q: %w", c.Default, err)
+			return newError(`unable to parse default URL "`+c.Default+`"`, err)
 		}
 		if !u.IsAbs() {
 			u.Scheme = "https"
@@ -270,6 +284,12 @@ func (l *Linker) load(s string) error {
 	l.Server.Handler.(*http.ServeMux).HandleFunc("/", l.serve)
 	return nil
 }
+func newError(s string, e error) error {
+	if e != nil {
+		return &errorValue{s: s + ": " + e.Error(), e: e}
+	}
+	return &errorValue{s: s}
+}
 
 // Add will attempt to add a redirect with the name of the first string to the URL provided in the second
 // string argument. This function will return an error if the add fails.
@@ -282,22 +302,21 @@ func (l *Linker) Add(n, u string) error {
 	}
 	p, err := url.Parse(strings.TrimSpace(u))
 	if err != nil {
-		return fmt.Errorf("invalid URL %q: %w", u, err)
+		return newError(`invalid URL "`+u+`"`, err)
 	}
 	if !p.IsAbs() {
 		p.Scheme = "https"
 	}
 	q, err := l.db.Prepare(sqlAdd)
 	if err != nil {
-		return fmt.Errorf("unable to prepare add statement: %w", err)
+		return newError("unable to prepare add statement", err)
 	}
-	defer q.Close()
-	r, err := q.Exec(n, p.String())
-	if err != nil {
-		return fmt.Errorf("unable to execute add statement: %w", err)
+	var r sql.Result
+	if r, err = q.Exec(n, p.String()); err == nil {
+		_, err = r.RowsAffected()
 	}
-	if _, err := r.RowsAffected(); err != nil {
-		return fmt.Errorf("unable to process add statement: %w", err)
+	if q.Close(); err != nil {
+		return newError("unable to execute add statement", err)
 	}
 	return nil
 }
@@ -313,17 +332,22 @@ func (l *Linker) Delete(n string) error {
 	}
 	q, err := l.db.Prepare(sqlDelete)
 	if err != nil {
-		return fmt.Errorf("unable to prepare delete statement: %w", err)
+		return newError("unable to prepare delete statement", err)
 	}
-	defer q.Close()
-	r, err := q.Exec(n)
-	if err != nil {
-		return fmt.Errorf("unable to execute delete statement: %w", err)
+	var r sql.Result
+	if r, err = q.Exec(n); err == nil {
+		_, err = r.RowsAffected()
 	}
-	if _, err := r.RowsAffected(); err != nil {
-		return fmt.Errorf("unable to process delete statement: %w", err)
+	if q.Close(); err != nil {
+		return newError("unable to execute delete statement", err)
 	}
 	return nil
+}
+func expandString(s string, l int) string {
+	for n := len(s); n < l; n++ {
+		s += " "
+	}
+	return s
 }
 func (l *Linker) context(_ net.Listener) context.Context {
 	return l.ctx
@@ -331,7 +355,8 @@ func (l *Linker) context(_ net.Listener) context.Context {
 func (l *Linker) serve(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Fprintf(os.Stderr, "http function recovered from a panic: %s\n", err)
+			os.Stderr.WriteString("http function recovered from a panic: ")
+			fmt.Fprintln(os.Stderr, err)
 		}
 	}()
 	if len(r.RequestURI) <= 1 {
@@ -352,8 +377,8 @@ func (l *Linker) serve(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, l.url, http.StatusTemporaryRedirect)
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintf(w, "Could not fetch requested URL: %q", x)
-			fmt.Fprintf(os.Stderr, "http function received an error: %s\n", err.Error())
+			w.Write([]byte(`Could not fetch requested URL "` + x + `"`))
+			os.Stderr.WriteString("http function received an error: " + err.Error() + "!\n")
 		}
 		return
 	}

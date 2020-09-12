@@ -18,7 +18,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 
 	"github.com/iDigitalFlame/linker"
@@ -47,7 +46,7 @@ func mainFunc() int {
 		add, delete, config string
 	)
 	args.Usage = func() {
-		fmt.Fprintln(os.Stderr, usage)
+		os.Stderr.WriteString(usage)
 		os.Exit(2)
 	}
 	args.StringVar(&config, "c", "", "Configuration file path.")
@@ -57,56 +56,53 @@ func mainFunc() int {
 	args.StringVar(&add, "r", "", "Delete the specified <name> to URL mapping.")
 
 	if err := args.Parse(os.Args[1:]); err != nil {
-		fmt.Fprintln(os.Stderr, usage)
+		os.Stderr.WriteString(usage)
 		return 2
 	}
 
 	if dump {
-		fmt.Fprintln(os.Stdout, linker.DefaultConfig)
+		os.Stdout.WriteString(linker.DefaultConfig)
 		return 0
 	}
 
 	l, err := linker.New(config)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %s\n", err.Error())
+		os.Stdout.WriteString("Error: " + err.Error() + "!\n")
 		return 1
 	}
 	defer l.Close()
 
-	if list {
+	switch {
+	case list:
 		if err := l.List(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %s\n", err.Error())
+			os.Stdout.WriteString("Error: " + err.Error() + "!\n")
 			return 1
 		}
 		return 0
-	}
-
-	if len(add) > 0 {
+	case len(add) > 0:
 		a := args.Args()
 		if len(a) < 1 {
-			fmt.Fprintln(os.Stderr, usage)
+			os.Stderr.WriteString(usage)
 			return 2
 		}
 		if err := l.Add(add, a[0]); err != nil {
-			fmt.Fprintf(os.Stderr, "Error adding %q: %s\n", a[0], err.Error())
+			os.Stdout.WriteString(`Error adding "` + a[0] + `": ` + err.Error() + "!\n")
 			return 1
 		}
-		fmt.Fprintf(os.Stdout, "Added mapping %q to %q!\n", add, a[0])
+		os.Stdout.WriteString(`Added mapping "` + add + `" to "` + a[0] + `"!` + "\n")
 		return 0
-	}
-
-	if len(delete) > 0 {
+	case len(delete) > 0:
 		if err := l.Delete(delete); err != nil {
-			fmt.Fprintf(os.Stderr, "Error removing %q: %s\n", delete, err.Error())
-			os.Exit(1)
+			os.Stdout.WriteString(`Error removing "` + delete + `": ` + err.Error() + "!\n")
+			return 1
 		}
-		fmt.Fprintf(os.Stdout, "Deleted mapping %q!\n", delete)
+		os.Stdout.WriteString(`Deleted mapping "` + delete + `"!` + "\n")
 		return 0
-	}
-
-	if err := l.Listen(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %s\n", err.Error())
-		return 1
+	default:
+		if err := l.Listen(); err != nil {
+			os.Stdout.WriteString("Error: " + err.Error() + "!\n")
+			return 1
+		}
 	}
 	return 0
 }
