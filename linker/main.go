@@ -53,7 +53,7 @@ func mainFunc() int {
 	args.BoolVar(&list, "l", false, "List the URL mapping and exit.")
 	args.BoolVar(&dump, "d", false, "Dump the default configuration and exit.")
 	args.StringVar(&add, "a", "", "Add the specified <name> to <URL> mapping.")
-	args.StringVar(&add, "r", "", "Delete the specified <name> to URL mapping.")
+	args.StringVar(&delete, "r", "", "Delete the specified <name> to URL mapping.")
 
 	if err := args.Parse(os.Args[1:]); err != nil {
 		os.Stderr.WriteString(usage)

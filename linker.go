@@ -152,6 +152,9 @@ func (l *Linker) Close() error {
 			return newError("unable to close database", err)
 		}
 	}
+	if l.ctx == nil {
+		return nil
+	}
 	select {
 	case <-l.ctx.Done():
 	default:
