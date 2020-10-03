@@ -37,9 +37,6 @@ Usage:
 `
 
 func main() {
-	os.Exit(mainFunc())
-}
-func mainFunc() int {
 	var (
 		args                = flag.NewFlagSet("Linker - HTTP Web URL Shortener v2", flag.ExitOnError)
 		list, dump          bool
@@ -57,52 +54,53 @@ func mainFunc() int {
 
 	if err := args.Parse(os.Args[1:]); err != nil {
 		os.Stderr.WriteString(usage)
-		return 2
+		os.Exit(2)
 	}
 
 	if dump {
 		os.Stdout.WriteString(linker.DefaultConfig)
-		return 0
+		os.Exit(0)
 	}
 
 	l, err := linker.New(config)
 	if err != nil {
 		os.Stdout.WriteString("Error: " + err.Error() + "!\n")
-		return 1
+		os.Exit(1)
 	}
-	defer l.Close()
 
 	switch {
 	case list:
 		if err := l.List(); err != nil {
+			l.Close()
 			os.Stdout.WriteString("Error: " + err.Error() + "!\n")
-			return 1
+			os.Exit(1)
 		}
-		return 0
 	case len(add) > 0:
 		a := args.Args()
 		if len(a) < 1 {
+			l.Close()
 			os.Stderr.WriteString(usage)
-			return 2
+			os.Exit(2)
 		}
 		if err := l.Add(add, a[0]); err != nil {
+			l.Close()
 			os.Stdout.WriteString(`Error adding "` + a[0] + `": ` + err.Error() + "!\n")
-			return 1
+			os.Exit(1)
 		}
 		os.Stdout.WriteString(`Added mapping "` + add + `" to "` + a[0] + `"!` + "\n")
-		return 0
 	case len(delete) > 0:
 		if err := l.Delete(delete); err != nil {
+			l.Close()
 			os.Stdout.WriteString(`Error removing "` + delete + `": ` + err.Error() + "!\n")
-			return 1
+			os.Exit(1)
 		}
 		os.Stdout.WriteString(`Deleted mapping "` + delete + `"!` + "\n")
-		return 0
 	default:
 		if err := l.Listen(); err != nil {
+			l.Close()
 			os.Stdout.WriteString("Error: " + err.Error() + "!\n")
-			return 1
+			os.Exit(1)
 		}
 	}
-	return 0
+	l.Close()
 }
