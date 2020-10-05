@@ -29,6 +29,7 @@ iDigitalFlame 2020 (idigitalflame.com)
 Usage:
   -h              Print this help menu.
   -l              List the URL mapping and exit.
+  -s              Start the Linker HTTP service.
   -d              Dump the default configuration and exit.
   -a <name> <URL> Add the specified <name> to <URL> mapping.
   -r <name>       Delete the specified <name> to URL mapping.
@@ -39,7 +40,7 @@ Usage:
 func main() {
 	var (
 		args                = flag.NewFlagSet("Linker - HTTP Web URL Shortener v2", flag.ExitOnError)
-		list, dump          bool
+		list, dump, listen  bool
 		add, delete, config string
 	)
 	args.Usage = func() {
@@ -48,6 +49,7 @@ func main() {
 	}
 	args.StringVar(&config, "c", "", "Configuration file path.")
 	args.BoolVar(&list, "l", false, "List the URL mapping and exit.")
+	args.BoolVar(&listen, "s", false, "Start the Linker HTTP service.")
 	args.BoolVar(&dump, "d", false, "Dump the default configuration and exit.")
 	args.StringVar(&add, "a", "", "Add the specified <name> to <URL> mapping.")
 	args.StringVar(&delete, "r", "", "Delete the specified <name> to URL mapping.")
@@ -58,7 +60,7 @@ func main() {
 	}
 
 	if dump {
-		os.Stdout.WriteString(linker.DefaultConfig)
+		os.Stdout.WriteString(linker.Defaults)
 		os.Exit(0)
 	}
 
@@ -70,37 +72,39 @@ func main() {
 
 	switch {
 	case list:
-		if err := l.List(); err != nil {
+		if err = l.List(); err != nil {
 			l.Close()
 			os.Stdout.WriteString("Error: " + err.Error() + "!\n")
 			os.Exit(1)
+		}
+	case listen:
+		if err = l.Listen(); err != nil {
+			l.Close()
+			os.Stdout.WriteString("Error: " + err.Error() + "!\n")
 		}
 	case len(add) > 0:
 		a := args.Args()
 		if len(a) < 1 {
 			l.Close()
 			os.Stderr.WriteString(usage)
-			os.Exit(2)
 		}
-		if err := l.Add(add, a[0]); err != nil {
+		if err = l.Add(add, a[0]); err != nil {
 			l.Close()
 			os.Stdout.WriteString(`Error adding "` + a[0] + `": ` + err.Error() + "!\n")
-			os.Exit(1)
 		}
 		os.Stdout.WriteString(`Added mapping "` + add + `" to "` + a[0] + `"!` + "\n")
 	case len(delete) > 0:
-		if err := l.Delete(delete); err != nil {
+		if err = l.Delete(delete); err != nil {
 			l.Close()
 			os.Stdout.WriteString(`Error removing "` + delete + `": ` + err.Error() + "!\n")
-			os.Exit(1)
 		}
 		os.Stdout.WriteString(`Deleted mapping "` + delete + `"!` + "\n")
 	default:
-		if err := l.Listen(); err != nil {
-			l.Close()
-			os.Stdout.WriteString("Error: " + err.Error() + "!\n")
-			os.Exit(1)
-		}
+		os.Stderr.WriteString(usage)
+		err = flag.ErrHelp
 	}
-	l.Close()
+
+	if l.Close(); err != nil {
+		os.Exit(1)
+	}
 }
