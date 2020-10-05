@@ -221,7 +221,7 @@ func expand(s string, l int) string {
 	if len(s) >= l {
 		return s
 	}
-	b := make([]byte, len(s)-l)
+	b := make([]byte, l)
 	copy(b, s)
 	for i := len(s); i < l; i++ {
 		b[i] = 32
