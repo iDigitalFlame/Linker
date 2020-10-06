@@ -63,7 +63,7 @@ const (
 	sqlAdd     = `INSERT INTO Links(LinkName, LinkURL) VALUES(?, ?)`
 	sqlList    = `SELECT LinkName, LinkURL FROM Links`
 	sqlDelete  = `DELETE FROM Links WHERE LinkName = ?`
-	sqlPrepare = `CREATE TABLE IF NOT EXISTS Links (LinkID INT(64) NOT NULL PRIMARY KEY AUTO_INCREMENT,
+	sqlPrepare = `CREATE TABLE IF NOT EXISTS Links (LinkID BIGINT(64) NOT NULL PRIMARY KEY AUTO_INCREMENT,
 		LinkName VARCHAR(64) NOT NULL UNIQUE, LinkURL VARCHAR(1024) NOT NULL)`
 
 	defaultURL     = `https://duckduckgo.com`
