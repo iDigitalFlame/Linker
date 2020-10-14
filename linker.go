@@ -201,6 +201,7 @@ func (l *Linker) Listen() error {
 	case <-s:
 	case <-l.ctx.Done():
 	}
+	signal.Stop(s)
 	close(s)
 	if l.cancel(); err != nil {
 		l.Close()
