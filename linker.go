@@ -181,6 +181,12 @@ func (l *Linker) Close() error {
 	l.ctx = nil
 	return l.Server.Close()
 }
+func (e errval) Error() string {
+	if e.e == nil {
+		return e.s
+	}
+	return e.s + ": " + e.e.Error()
+}
 
 // Listen will start the listing session for Linker to redirect HTTP requests. This function will block until the
 // Close function is called or a SIGINT is received. This function will return an error if there is an issue
@@ -208,15 +214,6 @@ func (l *Linker) Listen() error {
 		return err
 	}
 	return l.Close()
-}
-func (e errval) Error() string {
-	if e.e == nil {
-		return e.s
-	}
-	return e.s + ": " + e.e.Error()
-}
-func (e errval) Unwrap() error {
-	return e.e
 }
 func expand(s string, l int) string {
 	if len(s) >= l {
