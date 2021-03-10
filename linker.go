@@ -92,12 +92,12 @@ type errval struct {
 	s string
 }
 type config struct {
+	Database database `json:"db"`
 	Key      string   `json:"key"`
 	Cert     string   `json:"cert"`
 	Listen   string   `json:"listen"`
-	Timeout  uint8    `json:"timeout"`
 	Default  string   `json:"default"`
-	Database database `json:"db"`
+	Timeout  uint8    `json:"timeout"`
 }
 type database struct {
 	Name     string `json:"name"`
