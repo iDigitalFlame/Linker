@@ -1,4 +1,4 @@
-// Copyright (C) 2020 iDigitalFlame
+// Copyright (C) 2020 - 2022 iDigitalFlame
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published
@@ -17,14 +17,15 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"os"
 
 	"github.com/iDigitalFlame/linker"
 )
 
-const usage = `Linker - HTTP Web URL Shortener v2
-iDigitalFlame 2020 (idigitalflame.com)
+const usage = `Linker - HTTP Web URL Shortener v3
+iDigitalFlame & PurpleSec 2020 - 2022 (idigitalflame.com)
 
 Usage:
   -h              Print this help menu.
@@ -39,7 +40,7 @@ Usage:
 
 func main() {
 	var (
-		args                = flag.NewFlagSet("Linker - HTTP Web URL Shortener v2", flag.ExitOnError)
+		args                = flag.NewFlagSet("Linker - HTTP Web URL Shortener v3", flag.ExitOnError)
 		list, dump, listen  bool
 		add, delete, config string
 	)
@@ -72,39 +73,35 @@ func main() {
 
 	switch {
 	case list:
-		if err = l.List(); err != nil {
-			l.Close()
-			os.Stdout.WriteString("Error: " + err.Error() + "!\n")
-			os.Exit(1)
-		}
+		err = l.List()
 	case listen:
-		if err = l.Listen(); err != nil {
-			l.Close()
-			os.Stdout.WriteString("Error: " + err.Error() + "!\n")
-		}
+		err = l.Listen()
 	case len(add) > 0:
 		a := args.Args()
 		if len(a) < 1 {
-			l.Close()
-			os.Stderr.WriteString(usage)
+			err = flag.ErrHelp
+			break
 		}
 		if err = l.Add(add, a[0]); err != nil {
-			l.Close()
-			os.Stdout.WriteString(`Error adding "` + a[0] + `": ` + err.Error() + "!\n")
+			err = errors.New(`adding "` + a[0] + `": ` + err.Error())
+			break
 		}
 		os.Stdout.WriteString(`Added mapping "` + add + `" to "` + a[0] + `"!` + "\n")
 	case len(delete) > 0:
 		if err = l.Delete(delete); err != nil {
-			l.Close()
-			os.Stdout.WriteString(`Error removing "` + delete + `": ` + err.Error() + "!\n")
+			err = errors.New(`removing "` + delete + `": ` + err.Error())
+			break
 		}
 		os.Stdout.WriteString(`Deleted mapping "` + delete + `"!` + "\n")
 	default:
-		os.Stderr.WriteString(usage)
 		err = flag.ErrHelp
 	}
 
-	if l.Close(); err != nil {
+	if l.Close(); err == flag.ErrHelp {
+		os.Stdout.WriteString(usage)
+		os.Exit(2)
+	} else if err != nil {
+		os.Stderr.WriteString("Error: " + err.Error() + "!\n")
 		os.Exit(1)
 	}
 }
