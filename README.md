@@ -29,8 +29,8 @@ Default Config
 ## Command Line Options
 
 ```[text]
-Linker - HTTP Web URL Shortener v2
-iDigitalFlame 2020 (idigitalflame.com)
+Linker - HTTP Web URL Shortener v3
+iDigitalFlame & PurpleSec 2020 - 2022 (idigitalflame.com)
 
 Usage:
   -h              Print this help menu.
