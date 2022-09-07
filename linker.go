@@ -219,6 +219,19 @@ func expand(s string, l int) string {
 func (l *Linker) listen(err *error) {
 	l.Server.Handler.(*http.ServeMux).HandleFunc("/", l.serve)
 	if len(l.cert) == 0 || len(l.key) == 0 {
+		if len(l.Addr) > 5 && (l.Addr[0] == 'u' || l.Addr[0] == 'U') && (l.Addr[3] == 'x' || l.Addr[3] == 'X') {
+			n, e := net.Listen("unix", l.Addr[5:])
+			if e != nil {
+				*err = e
+				l.cancel()
+				return
+			}
+			if e = l.Serve(n); e != nil && e != http.ErrServerClosed {
+				*err = e
+			}
+			l.cancel()
+			return
+		}
 		if e := l.ListenAndServe(); e != nil && e != http.ErrServerClosed {
 			*err = e
 		}
@@ -238,6 +251,19 @@ func (l *Linker) listen(err *error) {
 		},
 		CurvePreferences:         []tls.CurveID{tls.CurveP256, tls.X25519},
 		PreferServerCipherSuites: true,
+	}
+	if len(l.Addr) > 5 && (l.Addr[0] == 'u' || l.Addr[0] == 'U') && (l.Addr[3] == 'x' || l.Addr[3] == 'X') {
+		n, e := net.Listen("unix", l.Addr[5:])
+		if e != nil {
+			*err = e
+			l.cancel()
+			return
+		}
+		if e = l.Serve(tls.NewListener(n, l.TLSConfig)); e != nil && e != http.ErrServerClosed {
+			*err = e
+		}
+		l.cancel()
+		return
 	}
 	if e := l.ListenAndServeTLS(l.cert, l.key); e != nil && e != http.ErrServerClosed {
 		*err = e
