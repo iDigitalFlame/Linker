@@ -20,7 +20,7 @@ if [ $# -ge 1 ]; then
     output="$1"
 fi
 
-echo "Building..."
+echo "Building.."
 go build -trimpath -ldflags "-s -w" -o "$output" cmd/main.go
 
 which upx &> /dev/null
