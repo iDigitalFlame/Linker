@@ -1,6 +1,6 @@
 # Linker: HTTP URL Shortener
 
-Linker is a Golang based URL shortening service. This self hosted binary provides fast and efficient HTTP redirection.
+Linker is a Golang based URL shortening service. This self-hosted binary provides fast and efficient HTTP redirection.
 
 Linker is backed by a MySQL database to store name and URL mappings.
 

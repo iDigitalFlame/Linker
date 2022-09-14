@@ -40,9 +40,9 @@ Usage:
 
 func main() {
 	var (
-		args                = flag.NewFlagSet("Linker - HTTP Web URL Shortener v3", flag.ExitOnError)
-		list, dump, listen  bool
-		add, delete, config string
+		args               = flag.NewFlagSet("Linker - HTTP Web URL Shortener v3", flag.ExitOnError)
+		add, del, config   string
+		list, dump, listen bool
 	)
 	args.Usage = func() {
 		os.Stderr.WriteString(usage)
@@ -53,7 +53,7 @@ func main() {
 	args.BoolVar(&listen, "s", false, "Start the Linker HTTP service.")
 	args.BoolVar(&dump, "d", false, "Dump the default configuration and exit.")
 	args.StringVar(&add, "a", "", "Add the specified <name> to <URL> mapping.")
-	args.StringVar(&delete, "r", "", "Delete the specified <name> to URL mapping.")
+	args.StringVar(&del, "r", "", "Delete the specified <name> to URL mapping.")
 
 	if err := args.Parse(os.Args[1:]); err != nil {
 		os.Stderr.WriteString(usage)
@@ -87,12 +87,12 @@ func main() {
 			break
 		}
 		os.Stdout.WriteString(`Added mapping "` + add + `" to "` + a[0] + `"!` + "\n")
-	case len(delete) > 0:
-		if err = l.Delete(delete); err != nil {
-			err = errors.New(`removing "` + delete + `": ` + err.Error())
+	case len(del) > 0:
+		if err = l.Delete(del); err != nil {
+			err = errors.New(`removing "` + del + `": ` + err.Error())
 			break
 		}
-		os.Stdout.WriteString(`Deleted mapping "` + delete + `"!` + "\n")
+		os.Stdout.WriteString(`Deleted mapping "` + del + `"!` + "\n")
 	default:
 		err = flag.ErrHelp
 	}

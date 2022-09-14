@@ -100,7 +100,7 @@ type database struct {
 
 // List will gather and print all the current link dataset.
 //
-// This function returns an error if there an error reading from the database.
+// This function returns an error if there is an error reading from the database.
 func (l *Linker) List() error {
 	if l.db == nil {
 		return errors.New("database is not loaded or configured")
@@ -250,7 +250,6 @@ func (l *Linker) listen(err *error) {
 			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
 		},
 		CurvePreferences:         []tls.CurveID{tls.CurveP256, tls.X25519},
-		PreferServerCipherSuites: true,
 	}
 	if len(l.Addr) > 5 && (l.Addr[0] == 'u' || l.Addr[0] == 'U') && (l.Addr[3] == 'x' || l.Addr[3] == 'X') {
 		n, e := net.Listen("unix", l.Addr[5:])
