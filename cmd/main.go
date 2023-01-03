@@ -1,4 +1,4 @@
-// Copyright (C) 2020 - 2022 iDigitalFlame
+// Copyright (C) 2020 - 2023 iDigitalFlame
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published
@@ -24,11 +24,14 @@ import (
 	"github.com/iDigitalFlame/linker"
 )
 
+var version = "unknown"
+
 const usage = `Linker - HTTP Web URL Shortener v3
-iDigitalFlame & PurpleSec 2020 - 2022 (idigitalflame.com)
+iDigitalFlame & PurpleSec 2020 - 2023 (idigitalflame.com)
 
 Usage:
   -h              Print this help menu.
+  -V              Print version string and exit.
   -l              List the URL mapping and exit.
   -s              Start the Linker HTTP service.
   -d              Dump the default configuration and exit.
@@ -40,24 +43,30 @@ Usage:
 
 func main() {
 	var (
-		args               = flag.NewFlagSet("Linker - HTTP Web URL Shortener v3", flag.ExitOnError)
-		add, del, config   string
-		list, dump, listen bool
+		args                    = flag.NewFlagSet("Linker - HTTP Web URL Shortener v3_"+version, flag.ExitOnError)
+		add, del, config        string
+		list, dump, listen, ver bool
 	)
 	args.Usage = func() {
 		os.Stderr.WriteString(usage)
 		os.Exit(2)
 	}
-	args.StringVar(&config, "c", "", "Configuration file path.")
-	args.BoolVar(&list, "l", false, "List the URL mapping and exit.")
-	args.BoolVar(&listen, "s", false, "Start the Linker HTTP service.")
-	args.BoolVar(&dump, "d", false, "Dump the default configuration and exit.")
-	args.StringVar(&add, "a", "", "Add the specified <name> to <URL> mapping.")
-	args.StringVar(&del, "r", "", "Delete the specified <name> to URL mapping.")
+	args.StringVar(&config, "c", "", "")
+	args.BoolVar(&list, "l", false, "")
+	args.BoolVar(&listen, "s", false, "")
+	args.BoolVar(&dump, "d", false, "")
+	args.StringVar(&add, "a", "", "")
+	args.StringVar(&del, "r", "", "")
+	args.BoolVar(&ver, "V", false, "")
 
 	if err := args.Parse(os.Args[1:]); err != nil {
 		os.Stderr.WriteString(usage)
 		os.Exit(2)
+	}
+
+	if ver {
+		os.Stdout.WriteString("Linker: " + version + "\n")
+		os.Exit(0)
 	}
 
 	if dump {

@@ -30,7 +30,7 @@ Default Config
 
 ```[text]
 Linker - HTTP Web URL Shortener v3
-iDigitalFlame & PurpleSec 2020 - 2022 (idigitalflame.com)
+iDigitalFlame & PurpleSec 2020 - 2023 (idigitalflame.com)
 
 Usage:
   -h              Print this help menu.
