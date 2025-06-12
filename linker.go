@@ -62,7 +62,7 @@ const (
 	sqlAdd     = `INSERT INTO Links(LinkName, LinkURL) VALUES(?, ?)`
 	sqlList    = `SELECT LinkName, LinkURL FROM Links`
 	sqlDelete  = `DELETE FROM Links WHERE LinkName = ?`
-	sqlPrepare = `CREATE TABLE IF NOT EXISTS Links (LinkID BIGINT(64) NOT NULL PRIMARY KEY AUTO_INCREMENT,
+	sqlPrepare = `CREATE TABLE IF NOT EXISTS Links (LinkID BIGINT(64) UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
 		LinkName VARCHAR(64) NOT NULL UNIQUE, LinkURL VARCHAR(1024) NOT NULL)`
 
 	defaultURL     = `https://duckduckgo.com`
@@ -249,7 +249,7 @@ func (l *Linker) listen(err *error) {
 			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
 			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
 		},
-		CurvePreferences:         []tls.CurveID{tls.CurveP256, tls.X25519},
+		CurvePreferences: []tls.CurveID{tls.CurveP256, tls.X25519},
 	}
 	if len(l.Addr) > 5 && (l.Addr[0] == 'u' || l.Addr[0] == 'U') && (l.Addr[3] == 'x' || l.Addr[3] == 'X') {
 		n, e := net.Listen("unix", l.Addr[5:])
