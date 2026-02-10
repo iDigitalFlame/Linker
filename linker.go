@@ -68,6 +68,8 @@ const (
 	defaultURL     = `https://duckduckgo.com`
 	defaultFile    = `/etc/linker.conf`
 	defaultTimeout = 5 * time.Second
+
+	goGetQuery = "go-get=1"
 )
 
 var regCheckURL = regexp.MustCompile(`(^\/[a-zA-Z0-9]+)`)
@@ -425,8 +427,25 @@ func (l *Linker) serve(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, l.url, http.StatusTemporaryRedirect)
 		return
 	}
+	if len(r.URL.RawQuery) == len(goGetQuery) && r.URL.RawQuery == goGetQuery && r.Method == http.MethodGet {
+		redirectGo(w, r, s[0:p[1]], n)
+		return
+	}
 	if p[1] < len(s) {
 		n = n + s[p[1]:]
 	}
 	http.Redirect(w, r, n, http.StatusTemporaryRedirect)
+}
+func redirectGo(w http.ResponseWriter, r *http.Request, x, n string) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	http.Redirect(w, r, "https://pkg.go.dev/"+r.Host+x, http.StatusOK)
+	w.Write(
+		[]byte(
+			`<!DOCTYPE html><html><head><meta name="go-import" content="` + r.Host + x +
+				` git ` + n + `"><meta name="go-source" content="` + r.Host + x + ` ` + n +
+				` ` + n + `/tree/master{/dir} ` + n + `/tree/master{/dir}/{file}#L{line}">` +
+				`<meta http-equiv="refresh" content="0; url=` + n + `"></head><body>` +
+				`No, no, no, go <a href="https://pkg.go.dev/` + r.Host + x + `">here</a>.</body></html>`,
+		),
+	)
 }
