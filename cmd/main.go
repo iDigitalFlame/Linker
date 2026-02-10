@@ -1,4 +1,4 @@
-// Copyright (C) 2020 - 2023 iDigitalFlame
+// Copyright (C) 2020 - 2026 iDigitalFlame
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published
@@ -26,8 +26,8 @@ import (
 
 var version = "unknown"
 
-const usage = `Linker - HTTP Web URL Shortener v3
-iDigitalFlame & PurpleSec 2020 - 2023 (idigitalflame.com)
+const usage = `Linker - HTTP Web URL Shortener v3.1
+iDigitalFlame & PurpleSec 2020 - 2026 (idigitalflame.com)
 
 Usage:
   -h              Print this help menu.
